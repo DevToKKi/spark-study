@@ -1,9 +1,10 @@
 package com.ddorong.spark.chapter03App
 
 import org.apache.spark.sql.SparkSession
+
 import scala.io.Source.fromFile
 
-object App {
+object GitHubDay {
   def main(args: Array[String]): Unit = {
     val spark = SparkSession.builder()
       .appName("SimpleApp")
@@ -13,7 +14,7 @@ object App {
     val sc = spark.sparkContext;
 
     val homeDir = System.getenv("HOME")
-    val inputPath = homeDir + "/sia/github-archive/2015-03-01-0.json"
+    val inputPath = homeDir + "/sia/github-archive/*.json"
     val ghLog = spark.read.json(inputPath)
 
     val pushes = ghLog.filter("type = 'PushEvent'")
@@ -54,5 +55,6 @@ object App {
     val filtered = ordered.filter(isEmployee($"login"))
 
     filtered.show()
+
   }
 }
