@@ -6,33 +6,19 @@ import scala.io.Source.fromFile
 
 object GitHubDay {
   def main(args: Array[String]): Unit = {
-    val spark = SparkSession.builder()
-      .appName("SimpleApp")
-      .master("local[*]")
-      .getOrCreate()
+
+    val spark = SparkSession.builder().getOrCreate()
 
     val sc = spark.sparkContext;
-
-    val homeDir = System.getenv("HOME")
-    val inputPath = homeDir + "/sia/github-archive/*.json"
-    val ghLog = spark.read.json(inputPath)
+    val ghLog = spark.read.json(args(0))
 
     val pushes = ghLog.filter("type = 'PushEvent'")
-    pushes.printSchema
-    println("all events: " + ghLog.count)
-    println("only pushes: " + pushes.count)
-    pushes.show(5)
-
     val grouped = pushes.groupBy("actor.login").count
-    grouped.show(5)
-
     val ordered = grouped.orderBy(grouped("count").desc)
-    ordered.show(5)
 
-    val empPath = homeDir + "/sia/first-edition/ch03/ghEmployees.txt"
     val employees = Set() ++ (
       for {
-        line <- fromFile(empPath).getLines
+        line <- fromFile(args(1)).getLines
       } yield line.trim
       )
 
@@ -50,11 +36,10 @@ object GitHubDay {
     /**
      * Regist User-define function
      */
-    val isEmployee = spark.udf.register("isEmpUdf", isEmp)
+    val sqlFunc = spark.udf.register("setContinsUdf", isEmp)
 
-    val filtered = ordered.filter(isEmployee($"login"))
+    val filtered = ordered.filter(sqlFunc($"login"))
 
-    filtered.show()
-
+    filtered.write.format(args(3)).save(args(2))
   }
 }
